@@ -24,6 +24,8 @@ COPY . .
 # cria pasta uploads
 RUN mkdir -p app/uploads/sinistros
 
+WORKDIR /app/sinistro_dash
+
 EXPOSE 8000
 
 CMD gunicorn sinistro_dash.wsgi:application \
