@@ -1,0 +1,80 @@
+# ───── Python genérico ─────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+parts/
+bin/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg-info/
+
+# ───── Virtual-envs ─────
+venv/
+env/
+.venv/
+.env/
+ENV/
+env.bak/
+venv.bak/
+pip-wheel-metadata/
+
+# ───── IDEs ─────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ───── Testes & cobertura ─────
+.pytest_cache/
+.coverage
+htmlcov/
+.xml
+*.cover
+.hypothesis/
+
+# ───── Linting / formatação ─────
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ───── FastAPI / Uvicorn runtime ─────
+*.log
+logs/
+access.log
+error.log
+uvicorn.log
+
+# ───── Bancos locais & uploads ─────
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+static/media/
+mediafiles/
+
+# ───── Variáveis de ambiente ─────
+.env
+.env.local
+.env.production
+.env.staging
+
+# ───── Docker ─────
+docker-compose.override.yml
+
+# ───── Arquivos de backup do sistema ─────
+*.bak
+*.tmp
+*.temp
