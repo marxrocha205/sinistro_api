@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     db_name: str
     db_user: str
     db_password: str
+    
+    r2_endpoint: str
+    r2_access_key: str
+    r2_secret_key: str
+    r2_bucket: str
 
     secret_key: str
     algorithm: str

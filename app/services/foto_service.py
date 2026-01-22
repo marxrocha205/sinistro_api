@@ -1,24 +1,23 @@
-import os
 import uuid
+import os
+
 from fastapi import UploadFile, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.sinistro_foto import SinistroFoto
 from app.repositories.sinistro_repository import SinistroRepository
-
-UPLOAD_DIR = "app/uploads/sinistros"
+from app.core.storage.r2client import s3, BUCKET, PUBLIC_URL
 
 
 class FotoService:
 
     @staticmethod
-    def upload(
+    def upload_foto(
         db: Session,
         sinistro_id: int,
         arquivo: UploadFile,
     ) -> SinistroFoto:
 
-        # 1️⃣ Verifica se o sinistro existe
         sinistro = SinistroRepository.get_by_id(db, sinistro_id)
         if not sinistro:
             raise HTTPException(
@@ -26,23 +25,23 @@ class FotoService:
                 detail="Sinistro não encontrado",
             )
 
-        # 2️⃣ Garante pasta
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        ext = os.path.splitext(arquivo.filename)[1]
+        filename = f"sinistros/{uuid.uuid4()}{ext}"
 
-        # 3️⃣ Gera nome único
-        extensao = os.path.splitext(arquivo.filename)[1]
-        nome_arquivo = f"{uuid.uuid4()}{extensao}"
+        # upload para R2
+        s3.upload_fileobj(
+            arquivo.file,
+            BUCKET,
+            filename,
+            ExtraArgs={
+                "ContentType": arquivo.content_type,
+            },
+        )
 
-        caminho_relativo = f"sinistros/{nome_arquivo}"
-        caminho_fisico = os.path.join(UPLOAD_DIR, nome_arquivo)
+        url = f"{PUBLIC_URL}/{filename}"
 
-        # 4️⃣ Salva o arquivo
-        with open(caminho_fisico, "wb") as f:
-            f.write(arquivo.file.read())
-
-        # 5️⃣ Cria vínculo no banco
         foto = SinistroFoto(
-            caminho_arquivo=caminho_relativo,
+            caminho_arquivo=url,
             sinistro_id=sinistro_id,
         )
 
