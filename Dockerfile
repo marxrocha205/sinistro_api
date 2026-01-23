@@ -4,6 +4,7 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
 # deps do sistema (mysql + build)
 RUN apt-get update && apt-get install -y \
@@ -22,5 +23,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD alembic upgrade head && python app/scripts/create_admin.py && uvicorn app.main:app --host 0.0.0.0 --port 8000
-
+CMD alembic upgrade head && python -m app.scripts.create_admin && uvicorn app.main:app --host 0.0.0.0 --port 8000
