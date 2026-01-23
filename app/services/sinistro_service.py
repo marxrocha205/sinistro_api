@@ -3,15 +3,14 @@ import uuid
 from fastapi import HTTPException, status, UploadFile
 from sqlalchemy.orm import Session
 
-from app.repositories.sinistro_repository import SinistroRepository
 from app.models.user import User
 from app.models.enums import TipoSecundarioSinistro
 from app.models.sinistro import Sinistro
 from app.models.sinistro_foto import SinistroFoto
+from app.repositories.sinistro_repository import SinistroRepository
+
 from app.core.config import settings
-
-
-UPLOAD_DIR = "app/uploads/sinistros"
+from app.core.storage.r2client import s3, BUCKET
 
 
 class SinistroService:
@@ -23,19 +22,20 @@ class SinistroService:
         current_user: User,
         files: list[UploadFile] | None = None,
     ):
+
         if not (-90 <= data.latitude <= 90):
             raise HTTPException(
                 status_code=400,
                 detail="Latitude inválida",
-        )
+            )
 
         if not (-180 <= data.longitude <= 180):
             raise HTTPException(
                 status_code=400,
                 detail="Longitude inválida",
-        )
-        
-        # 🔒 Regra de negócio
+            )
+
+        # 🔒 regra OUTRO
         if data.tipo_secundario in [
             TipoSecundarioSinistro.CARRO_OUTRO,
             TipoSecundarioSinistro.MOTO_OUTRO,
@@ -45,7 +45,10 @@ class SinistroService:
                 detail="Descrição obrigatória para tipo OUTRO",
             )
 
-        # 🧱 Cria sinistro
+        # ==========================
+        # 🧱 cria sinistro
+        # ==========================
+
         sinistro = Sinistro(
             tipo_principal=data.tipo_principal,
             tipo_secundario=data.tipo_secundario,
@@ -62,25 +65,33 @@ class SinistroService:
         db.commit()
         db.refresh(sinistro)
 
-        # 📸 Se não houver fotos, encerra aqui
+        # ==========================
+        # 📸 upload para R2
+        # ==========================
+
         if not files:
             return sinistro
 
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-        # 📸 Salva fotos vinculadas ao sinistro
         for file in files:
-            extensao = os.path.splitext(file.filename)[1]
-            nome_arquivo = f"{uuid.uuid4()}{extensao}"
 
-            caminho_fisico = os.path.join(UPLOAD_DIR, nome_arquivo)
-            caminho_relativo = f"sinistros/{nome_arquivo}"
+            ext = os.path.splitext(file.filename)[1]
+            nome = f"{uuid.uuid4()}{ext}"
 
-            with open(caminho_fisico, "wb") as f:
-                f.write(file.file.read())
+            object_key = f"sinistros/{sinistro.id}/{nome}"
+
+            print("☁️ R2 UPLOAD:", object_key)
+
+            s3.upload_fileobj(
+                file.file,
+                BUCKET,
+                object_key,
+                ExtraArgs={
+                    "ContentType": file.content_type,
+                },
+            )
 
             foto = SinistroFoto(
-                caminho_arquivo=caminho_relativo,
+                caminho_arquivo=object_key,
                 sinistro_id=sinistro.id,
             )
 
@@ -90,6 +101,8 @@ class SinistroService:
         db.refresh(sinistro)
 
         return sinistro
+
+    # ============================
 
     @staticmethod
     def list_sinistros(db: Session, skip: int, limit: int):

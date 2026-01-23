@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     r2_access_key: str
     r2_secret_key: str
     r2_bucket: str
-
+    r2_public_url: str
+    
     secret_key: str
     algorithm: str
     access_token_expire_minutes: int

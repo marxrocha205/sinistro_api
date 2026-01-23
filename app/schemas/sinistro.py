@@ -1,21 +1,13 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime
+
 from app.models.enums import TipoPrincipalSinistro, TipoSecundarioSinistro
 from app.schemas.sinistro_foto import SinistroFotoResponse
-
-
-class SinistroCreate(BaseModel):
-    tipo_principal: TipoPrincipalSinistro
-    tipo_secundario: TipoSecundarioSinistro
-    descricao_outro: str | None = None
-    latitude: float 
-    longitude: float 
-    endereco: str
-    ponto_referencia: str | None = None
-    houve_vitima_fatal: bool = False
+from app.core.config import settings
 
 
 class SinistroResponse(BaseModel):
+
     id: int
     tipo_principal: TipoPrincipalSinistro
     tipo_secundario: TipoSecundarioSinistro
@@ -29,7 +21,20 @@ class SinistroResponse(BaseModel):
     usuario_id: int
     fotos: list[SinistroFotoResponse] = []
 
+    @classmethod
+    def model_validate(cls, obj):
+
+        data = super().model_validate(obj)
+
+        data.fotos = [
+            {
+                "id": f.id,
+                "url": f"{settings.r2_public_url}/{f.caminho_arquivo}",
+            }
+            for f in obj.fotos
+        ]
+
+        return data
+
     class Config:
         from_attributes = True
-    
-    
