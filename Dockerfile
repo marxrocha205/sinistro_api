@@ -5,7 +5,7 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# dependências do sistema
+# deps do sistema (mysql + build)
 RUN apt-get update && apt-get install -y \
     gcc \
     build-essential \
@@ -15,21 +15,11 @@ RUN apt-get update && apt-get install -y \
 
 # deps python
 COPY requirements.txt .
-RUN pip install --upgrade pip \
-    && pip install -r requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# copia código
+# copia projeto
 COPY . .
-
-# cria pasta uploads
-RUN mkdir -p app/uploads/sinistros
-
-WORKDIR /app/sinistro_dash
 
 EXPOSE 8000
 
-CMD gunicorn sinistro_dash.wsgi:application \
-    --bind 0.0.0.0:$PORT \
-    --workers 2 \
-    --threads 4 \
-    --timeout 120
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
