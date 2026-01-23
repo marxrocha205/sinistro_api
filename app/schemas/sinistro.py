@@ -6,6 +6,19 @@ from app.schemas.sinistro_foto import SinistroFotoResponse
 from app.core.config import settings
 
 
+# ✅ ESSE ESTAVA FALTANDO
+class SinistroCreate(BaseModel):
+
+    tipo_principal: TipoPrincipalSinistro
+    tipo_secundario: TipoSecundarioSinistro
+    descricao_outro: str | None
+    endereco: str
+    ponto_referencia: str | None
+    latitude: float
+    longitude: float
+    houve_vitima_fatal: bool
+
+
 class SinistroResponse(BaseModel):
 
     id: int
