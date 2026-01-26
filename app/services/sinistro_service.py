@@ -129,4 +129,23 @@ class SinistroService:
                 detail="Sinistro não encontrado",
             )
 
-        return sinistro
+        return {
+    "id": sinistro.id,
+    "tipo_principal": sinistro.tipo_principal,
+    "tipo_secundario": sinistro.tipo_secundario,
+    "descricao_outro": sinistro.descricao_outro,
+    "endereco": sinistro.endereco,
+    "latitude": sinistro.latitude,
+    "longitude": sinistro.longitude,
+    "ponto_referencia": sinistro.ponto_referencia,
+    "houve_vitima_fatal": sinistro.houve_vitima_fatal,
+    "data_hora": sinistro.data_hora,
+    "usuario_id": sinistro.usuario_id,
+    "fotos": [
+        {
+            "id": f.id,
+            "url": f"{settings.r2_public_url}/{f.caminho_arquivo}",
+        }
+        for f in sinistro.fotos
+    ],
+}
