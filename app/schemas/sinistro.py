@@ -33,21 +33,7 @@ class SinistroResponse(BaseModel):
     data_hora: datetime
     usuario_id: int
     fotos: list[SinistroFotoResponse] = []
-
-    @classmethod
-    def model_validate(cls, obj):
-
-        data = super().model_validate(obj)
-
-        data.fotos = [
-            {
-                "id": f.id,
-                "url": f"{settings.r2_public_url}/{f.caminho_arquivo}",
-            }
-            for f in obj.fotos
-        ]
-
-        return data
+    
 
     class Config:
         from_attributes = True
