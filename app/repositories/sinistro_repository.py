@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.models.sinistro import Sinistro
 
 
@@ -26,5 +26,6 @@ class SinistroRepository:
         return (
             db.query(Sinistro)
             .filter(Sinistro.id == sinistro_id)
+            .options(joinedload(Sinistro.fotos))
             .first()
         )
