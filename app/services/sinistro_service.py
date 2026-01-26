@@ -23,6 +23,10 @@ class SinistroService:
         files: list[UploadFile] | None = None,
     ):
 
+        # ==========================
+        # validações
+        # ==========================
+
         if not (-90 <= data.latitude <= 90):
             raise HTTPException(
                 status_code=400,
@@ -35,7 +39,6 @@ class SinistroService:
                 detail="Longitude inválida",
             )
 
-        # 🔒 regra OUTRO
         if data.tipo_secundario in [
             TipoSecundarioSinistro.CARRO_OUTRO,
             TipoSecundarioSinistro.MOTO_OUTRO,
@@ -46,7 +49,7 @@ class SinistroService:
             )
 
         # ==========================
-        # 🧱 cria sinistro
+        # cria sinistro
         # ==========================
 
         sinistro = Sinistro(
@@ -66,7 +69,7 @@ class SinistroService:
         db.refresh(sinistro)
 
         # ==========================
-        # 📸 upload para R2
+        # upload R2
         # ==========================
 
         if not files:
@@ -100,6 +103,13 @@ class SinistroService:
         db.commit()
         db.refresh(sinistro)
 
+        # ==========================
+        # monta URL pública
+        # ==========================
+
+        for foto in sinistro.fotos:
+            foto.url = f"{settings.r2_public_url}/{foto.caminho_arquivo}"
+
         return sinistro
 
     # ============================
@@ -110,6 +120,7 @@ class SinistroService:
 
     @staticmethod
     def get_sinistro(db: Session, sinistro_id: int):
+
         sinistro = SinistroRepository.get_by_id(db, sinistro_id)
 
         if not sinistro:

@@ -3,10 +3,13 @@ from datetime import datetime
 
 from app.models.enums import TipoPrincipalSinistro, TipoSecundarioSinistro
 from app.schemas.sinistro_foto import SinistroFotoResponse
-from app.core.config import settings
+from app.core.config import Settings
 
 
-# ✅ ESSE ESTAVA FALTANDO
+# ===========================
+# CREATE
+# ===========================
+
 class SinistroCreate(BaseModel):
 
     tipo_principal: TipoPrincipalSinistro
@@ -18,6 +21,10 @@ class SinistroCreate(BaseModel):
     longitude: float
     houve_vitima_fatal: bool
 
+
+# ===========================
+# RESPONSE
+# ===========================
 
 class SinistroResponse(BaseModel):
 
@@ -33,7 +40,6 @@ class SinistroResponse(BaseModel):
     data_hora: datetime
     usuario_id: int
     fotos: list[SinistroFotoResponse] = []
-    
 
     class Config:
         from_attributes = True
