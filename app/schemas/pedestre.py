@@ -1,13 +1,13 @@
 from pydantic import BaseModel
 
 
-class CondutorCreate(BaseModel):
+class PedestreCreate(BaseModel):
 
     nome: str
     cpf: str
 
 
-class CondutorResponse(BaseModel):
+class PedestreResponse(BaseModel):
 
     id: int
     nome: str

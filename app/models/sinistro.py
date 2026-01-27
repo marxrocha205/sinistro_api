@@ -41,3 +41,9 @@ class Sinistro(Base):
         back_populates="sinistro",
         cascade="all, delete-orphan"
     )
+    
+    pedestres = relationship(
+        "Pedestre",
+        back_populates="sinistro",
+        cascade="all, delete-orphan"
+    )

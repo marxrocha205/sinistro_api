@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import date
+import json
 
 from app.database.deps import get_db
-from app.schemas.sinistro import SinistroCreate, SinistroResponse
+from app.schemas.sinistro import SinistroCreate, SinistroResponse, SinistroUpdate
 from app.services.sinistro_service import SinistroService
 from app.core.security import get_current_user
 from app.models.user import User
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/sinistros", tags=["Sinistros"])
 
 
 # ✅ CREATE SINISTRO + FOTOS (JUNTOS)
-@router.post("", response_model=SinistroResponse)
+@router.post("", response_model=dict)
 def criar_sinistro(
     tipo_principal: TipoPrincipalSinistro = Form(...),
     tipo_secundario: TipoSecundarioSinistro = Form(...),
@@ -28,11 +29,20 @@ def criar_sinistro(
     latitude: float = Form(...),
     longitude: float = Form(...),
     houve_vitima_fatal: bool = Form(False),
+
+    payload: str = Form(...),  # JSON com veiculos/pedestres
+
     files: list[UploadFile] | None = File(None),
 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
+    try:
+        payload_data = json.loads(payload)
+    except Exception:
+        raise HTTPException(400, "Payload inválido")
+
     data = SinistroCreate(
         tipo_principal=tipo_principal,
         tipo_secundario=tipo_secundario,
@@ -42,6 +52,8 @@ def criar_sinistro(
         latitude=latitude,
         longitude=longitude,
         houve_vitima_fatal=houve_vitima_fatal,
+        veiculos=payload_data.get("veiculos", []),
+        pedestres=payload_data.get("pedestres", []),
     )
 
     return SinistroService.create_sinistro(
@@ -129,3 +141,59 @@ def sinistros_mapa(
         }
         for s in sinistros
     ]
+
+@router.put("/{sinistro_id}", response_model=SinistroResponse)
+def atualizar_sinistro(
+    sinistro_id: int,
+    tipo_principal: TipoPrincipalSinistro = Form(...),
+    tipo_secundario: TipoSecundarioSinistro = Form(...),
+    descricao_outro: str | None = Form(None),
+    endereco: str = Form(...),
+    ponto_referencia: str | None = Form(None),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    houve_vitima_fatal: bool = Form(False),
+
+    veiculos: str = Form("[]"),
+    pedestres: str = Form("[]"),
+
+    files: list[UploadFile] | None = File(None),
+
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+
+    data = SinistroUpdate(
+        tipo_principal=tipo_principal,
+        tipo_secundario=tipo_secundario,
+        descricao_outro=descricao_outro,
+        endereco=endereco,
+        ponto_referencia=ponto_referencia,
+        latitude=latitude,
+        longitude=longitude,
+        houve_vitima_fatal=houve_vitima_fatal,
+        veiculos=json.loads(veiculos),
+        pedestres=json.loads(pedestres),
+    )
+
+    return SinistroService.update_sinistro(
+        db=db,
+        sinistro_id=sinistro_id,
+        data=data,
+        current_user=current_user,
+        files=files,
+    )
+
+@router.delete("/{sinistro_id}")
+def deletar_sinistro(
+    sinistro_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    SinistroService.delete_sinistro(
+        db=db,
+        sinistro_id=sinistro_id,
+        current_user=current_user,
+    )
+
+    return {"message": "Sinistro removido com sucesso"}
