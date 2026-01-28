@@ -2,7 +2,7 @@ import os
 import uuid
 
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.enums import (
     TipoSecundarioSinistro,
@@ -192,8 +192,16 @@ class SinistroService:
                 )
 
         db.commit()
-        db.refresh(sinistro)
-
+        sinistro = (
+        db.query(Sinistro)
+            .filter(Sinistro.id == sinistro.id)
+            .options(
+                joinedload(Sinistro.veiculos).joinedload(Veiculo.condutor),
+                joinedload(Sinistro.pedestres),
+                joinedload(Sinistro.fotos),
+            )
+            .first()
+        )
         return serialize_sinistro(sinistro)
 
     # ======================================================
@@ -331,7 +339,16 @@ class SinistroService:
                 )
 
         db.commit()
-        db.refresh(sinistro)
+        sinistro = (
+            db.query(Sinistro)
+            .filter(Sinistro.id == sinistro.id)
+            .options(
+                joinedload(Sinistro.veiculos).joinedload(Veiculo.condutor),
+                joinedload(Sinistro.pedestres),
+                joinedload(Sinistro.fotos),
+            )
+            .first()
+        )
 
         return serialize_sinistro(sinistro)
 
