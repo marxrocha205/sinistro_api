@@ -397,3 +397,17 @@ class SinistroService:
 
         db.delete(sinistro)
         db.commit()
+
+    @staticmethod
+    def get_sinistro(db: Session, sinistro_id: int):
+
+        sinistro = (
+            db.query(Sinistro)
+            .filter(Sinistro.id == sinistro_id)
+            .first()
+        )
+
+        if not sinistro:
+            raise HTTPException(404, "Sinistro não encontrado")
+
+        return serialize_sinistro(sinistro)
