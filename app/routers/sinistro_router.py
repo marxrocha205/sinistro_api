@@ -37,7 +37,19 @@ def criar_sinistro(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
+    print("====== SINISTRO DEBUG API ======")
+    print("tipo_principal:", tipo_principal)
+    print("tipo_secundario:", tipo_secundario)
+    print("descricao_outro:", descricao_outro)
+    print("endereco:", endereco)
+    print("ponto_referencia:", ponto_referencia)
+    print("latitude:", latitude)
+    print("longitude:", longitude)
+    print("houve_vitima_fatal:", houve_vitima_fatal)
+    print("payload bruto:", payload)
+    print("files:", files)
+    print("===============================")
+    
     try:
         payload_data = json.loads(payload)
     except Exception:

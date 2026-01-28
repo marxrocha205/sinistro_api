@@ -8,6 +8,7 @@ class PerfilUsuario(str, Enum):
 class TipoPrincipalSinistro(str, Enum):
     CARRO = "CARRO"
     MOTO = "MOTO"
+    OUTRO = "OUTRO"
 
 
 class TipoSecundarioSinistro(str, Enum):
@@ -19,6 +20,7 @@ class TipoSecundarioSinistro(str, Enum):
     MOTO_MOTO = "MOTO_MOTO"
     MOTO_PEDESTRE = "MOTO_PEDESTRE"
     MOTO_OUTRO = "MOTO_OUTRO"
+    OUTRO_OUTRO = "OUTRO_OUTRO"
 
 
 class TipoVeiculo(str, Enum):

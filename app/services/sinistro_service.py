@@ -1,21 +1,29 @@
-import os,uuid
+import os
 import uuid
-from fastapi import HTTPException, status, UploadFile
+
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models.enums import TipoSecundarioSinistro, TipoVeiculo
+from app.models.enums import (
+    TipoSecundarioSinistro,
+    TipoVeiculo,
+)
 from app.models.sinistro import Sinistro
 from app.models.veiculo import Veiculo
 from app.models.condutor import Condutor
 from app.models.pedestre import Pedestre
 from app.models.sinistro_foto import SinistroFoto
+
 from app.services.sinistro_serializer import serialize_sinistro
 
-from app.core.config import settings
 from app.core.storage.r2client import s3, BUCKET
 
 
 class SinistroService:
+
+    # ======================================================
+    # CREATE
+    # ======================================================
 
     @staticmethod
     def create_sinistro(
@@ -26,7 +34,7 @@ class SinistroService:
     ):
 
         # ==========================
-        # 🌍 VALIDAÇÕES GEO
+        # 🌍 GEO
         # ==========================
 
         if not (-90 <= data.latitude <= 90):
@@ -36,7 +44,7 @@ class SinistroService:
             raise HTTPException(400, "Longitude inválida")
 
         # ==========================
-        # 🧠 VALIDAÇÃO POR TIPO
+        # 🧠 VALIDAÇÕES POR TIPO
         # ==========================
 
         veiculos = data.veiculos or []
@@ -47,37 +55,58 @@ class SinistroService:
         def count_tipo(t):
             return len([v for v in veiculos if v.tipo == t])
 
+        # --------------------------
+        # CARRO
+        # --------------------------
+
         if tipo == TipoSecundarioSinistro.CARRO_CARRO:
             if count_tipo(TipoVeiculo.CARRO) != 2:
                 raise HTTPException(400, "CARRO_CARRO exige 2 carros")
 
         if tipo == TipoSecundarioSinistro.CARRO_MOTO:
-            if count_tipo(TipoVeiculo.CARRO) != 1 or count_tipo(TipoVeiculo.MOTO) != 1:
+            if (
+                count_tipo(TipoVeiculo.CARRO) != 1
+                or count_tipo(TipoVeiculo.MOTO) != 1
+            ):
                 raise HTTPException(400, "CARRO_MOTO exige 1 carro e 1 moto")
 
         if tipo == TipoSecundarioSinistro.CARRO_PEDESTRE:
             if not pedestres:
                 raise HTTPException(400, "CARRO_PEDESTRE exige pedestre")
 
-        if tipo == TipoSecundarioSinistro.CARRO_OUTRO:
-            if not data.descricao_outro:
-                raise HTTPException(400, "Descrição obrigatória")
+        # --------------------------
+        # MOTO
+        # --------------------------
 
         if tipo == TipoSecundarioSinistro.MOTO_MOTO:
             if count_tipo(TipoVeiculo.MOTO) != 2:
                 raise HTTPException(400, "MOTO_MOTO exige 2 motos")
 
         if tipo == TipoSecundarioSinistro.MOTO_CARRO:
-            if count_tipo(TipoVeiculo.MOTO) != 1 or count_tipo(TipoVeiculo.CARRO) != 1:
+            if (
+                count_tipo(TipoVeiculo.MOTO) != 1
+                or count_tipo(TipoVeiculo.CARRO) != 1
+            ):
                 raise HTTPException(400, "MOTO_CARRO exige 1 moto e 1 carro")
 
         if tipo == TipoSecundarioSinistro.MOTO_PEDESTRE:
             if not pedestres:
                 raise HTTPException(400, "MOTO_PEDESTRE exige pedestre")
 
-        if tipo == TipoSecundarioSinistro.MOTO_OUTRO:
+        # --------------------------
+        # *_OUTRO / OUTRO_OUTRO
+        # --------------------------
+
+        if tipo in (
+            TipoSecundarioSinistro.CARRO_OUTRO,
+            TipoSecundarioSinistro.MOTO_OUTRO,
+            TipoSecundarioSinistro.OUTRO_OUTRO,
+        ):
             if not data.descricao_outro:
-                raise HTTPException(400, "Descrição obrigatória")
+                raise HTTPException(
+                    400,
+                    "Descrição obrigatória para tipo OUTRO",
+                )
 
         # ==========================
         # 🧱 CRIA SINISTRO
@@ -155,18 +184,22 @@ class SinistroService:
                     ExtraArgs={"ContentType": file.content_type},
                 )
 
-                foto = SinistroFoto(
-                    caminho_arquivo=key,
-                    sinistro_id=sinistro.id,
+                db.add(
+                    SinistroFoto(
+                        caminho_arquivo=key,
+                        sinistro_id=sinistro.id,
+                    )
                 )
-                db.add(foto)
 
         db.commit()
         db.refresh(sinistro)
 
-        
         return serialize_sinistro(sinistro)
-    
+
+    # ======================================================
+    # UPDATE
+    # ======================================================
+
     @staticmethod
     def update_sinistro(
         db: Session,
@@ -176,13 +209,17 @@ class SinistroService:
         files=None,
     ):
 
-        sinistro = db.query(Sinistro).filter_by(id=sinistro_id).first()
+        sinistro = (
+            db.query(Sinistro)
+            .filter_by(id=sinistro_id)
+            .first()
+        )
 
         if not sinistro:
             raise HTTPException(404, "Sinistro não encontrado")
 
         # ==========================
-        # 🔁 ATUALIZA CAMPOS
+        # 🔁 CAMPOS
         # ==========================
 
         sinistro.tipo_principal = data.tipo_principal
@@ -195,7 +232,7 @@ class SinistroService:
         sinistro.houve_vitima_fatal = data.houve_vitima_fatal
 
         # ==========================
-        # 💣 LIMPA ANTIGOS
+        # 💣 LIMPA RELAÇÕES
         # ==========================
 
         sinistro.veiculos.clear()
@@ -204,7 +241,7 @@ class SinistroService:
         db.flush()
 
         # ==========================
-        # 🧠 REVALIDA REGRAS
+        # 🧠 REVALIDA
         # ==========================
 
         veiculos = data.veiculos or []
@@ -221,8 +258,16 @@ class SinistroService:
         if tipo == TipoSecundarioSinistro.CARRO_PEDESTRE and not pedestres:
             raise HTTPException(400, "CARRO_PEDESTRE exige pedestre")
 
-        if tipo == TipoSecundarioSinistro.CARRO_OUTRO and not data.descricao_outro:
-            raise HTTPException(400, "Descrição obrigatória")
+        if tipo in (
+            TipoSecundarioSinistro.CARRO_OUTRO,
+            TipoSecundarioSinistro.MOTO_OUTRO,
+            TipoSecundarioSinistro.OUTRO_OUTRO,
+        ):
+            if not data.descricao_outro:
+                raise HTTPException(
+                    400,
+                    "Descrição obrigatória para tipo OUTRO",
+                )
 
         # ==========================
         # 🚗 RECRIA
@@ -242,20 +287,22 @@ class SinistroService:
             db.flush()
 
             if v.condutor:
-                condutor = Condutor(
-                    nome=v.condutor.nome,
-                    cpf=v.condutor.cpf,
-                    veiculo_id=veiculo.id,
+                db.add(
+                    Condutor(
+                        nome=v.condutor.nome,
+                        cpf=v.condutor.cpf,
+                        veiculo_id=veiculo.id,
+                    )
                 )
-                db.add(condutor)
 
         for p in pedestres:
-            pedestre = Pedestre(
-                nome=p.nome,
-                cpf=p.cpf,
-                sinistro_id=sinistro.id,
+            db.add(
+                Pedestre(
+                    nome=p.nome,
+                    cpf=p.cpf,
+                    sinistro_id=sinistro.id,
+                )
             )
-            db.add(pedestre)
 
         # ==========================
         # 📸 NOVAS FOTOS
@@ -263,6 +310,7 @@ class SinistroService:
 
         if files:
             for file in files:
+
                 ext = os.path.splitext(file.filename)[1]
                 nome = f"{uuid.uuid4()}{ext}"
 
@@ -287,6 +335,9 @@ class SinistroService:
 
         return serialize_sinistro(sinistro)
 
+    # ======================================================
+    # DELETE
+    # ======================================================
 
     @staticmethod
     def delete_sinistro(
@@ -304,16 +355,15 @@ class SinistroService:
         if not sinistro:
             raise HTTPException(404, "Sinistro não encontrado")
 
-        # 🔐 permissão (opcional)
         if (
             current_user.perfil != "ADMIN"
             and sinistro.usuario_id != current_user.id
         ):
             raise HTTPException(403, "Sem permissão")
 
-        # ==========================
-        # 🧹 remove arquivos do R2
-        # ==========================
+        # --------------------------
+        # 🧹 R2
+        # --------------------------
 
         for foto in sinistro.fotos:
             try:
@@ -324,9 +374,9 @@ class SinistroService:
             except Exception as e:
                 print("⚠️ Erro removendo R2:", e)
 
-        # ==========================
-        # 🧨 remove DB (cascade)
-        # ==========================
+        # --------------------------
+        # 💥 DB (cascade)
+        # --------------------------
 
         db.delete(sinistro)
         db.commit()
