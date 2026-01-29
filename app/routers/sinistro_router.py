@@ -64,8 +64,7 @@ def criar_sinistro(
         latitude=latitude,
         longitude=longitude,
         houve_vitima_fatal=houve_vitima_fatal,
-        veiculos=payload_data.get("veiculos", []),
-        pedestres=payload_data.get("pedestres", []),
+        envolvidos=payload_data.get("envolvidos", []),
     )
 
     return SinistroService.create_sinistro(

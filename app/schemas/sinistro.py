@@ -1,3 +1,4 @@
+from app.schemas.envolvido import EnvolvidoCreate
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -26,8 +27,7 @@ class SinistroCreate(BaseModel):
 
     houve_vitima_fatal: bool = False
 
-    veiculos: list[VeiculoCreate] = []
-    pedestres: list[PedestreCreate] = []
+    envolvidos: list[EnvolvidoCreate] = []
 
 
 # ==========================
@@ -54,8 +54,7 @@ class SinistroResponse(BaseModel):
     usuario_id: int
 
     fotos: list[SinistroFotoResponse] = []
-    veiculos: list[VeiculoResponse] = []
-    pedestres: list[PedestreResponse] = []
+    envolvidos: list[EnvolvidoCreate] = []
 
     class Config:
         from_attributes = True
@@ -73,5 +72,4 @@ class SinistroUpdate(BaseModel):
     longitude: float
     houve_vitima_fatal: bool
 
-    veiculos: list[VeiculoCreate] = []
-    pedestres: list[PedestreCreate] = []
+    envolvidos: list[EnvolvidoCreate] = []
