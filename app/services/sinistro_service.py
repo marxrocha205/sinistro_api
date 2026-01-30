@@ -183,3 +183,23 @@ class SinistroService:
             TipoPrincipalSinistro.OUTRO,
             TipoSecundarioSinistro.OUTRO_OUTRO,
         )
+        
+    @staticmethod
+    def get_sinistro(db: Session, sinistro_id: int):
+
+        sinistro = (
+            db.query(Sinistro)
+            .filter(Sinistro.id == sinistro_id)
+            .options(
+                joinedload(Sinistro.veiculos).joinedload(Veiculo.condutor),
+                joinedload(Sinistro.pedestres),
+                joinedload(Sinistro.fotos),
+                joinedload(Sinistro.usuario),  # 👈 IMPORTANTE
+            )
+            .first()
+        )
+
+        if not sinistro:
+            raise HTTPException(status_code=404, detail="Sinistro não encontrado")
+
+        return serialize_sinistro(sinistro)

@@ -47,3 +47,4 @@ class Sinistro(Base):
         back_populates="sinistro",
         cascade="all, delete-orphan"
     )
+    usuario = relationship("User")

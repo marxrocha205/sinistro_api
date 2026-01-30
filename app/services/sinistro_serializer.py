@@ -15,6 +15,11 @@ def serialize_sinistro(s):
         "houve_vitima_fatal": s.houve_vitima_fatal,
         "data_hora": s.data_hora,
         "usuario_id": s.usuario_id,
+        "usuario": {                       # 👈 NOVO
+            "id": s.usuario.id,
+            "username": s.usuario.username,
+            "perfil": s.usuario.perfil,
+        } if s.usuario else None,
         "fotos": [
             {
                 "id": f.id,
