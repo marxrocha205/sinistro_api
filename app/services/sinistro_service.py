@@ -25,28 +25,16 @@ class SinistroService:
     # ======================================================
 
     @staticmethod
-    def create_sinistro(
-        db: Session,
-        data,
-        current_user,
-        files=None,
-    ):
+    def create_sinistro(db: Session, data, current_user, files=None):
+
         files = files or []
 
         if not data.envolvidos:
             raise HTTPException(400, "Informe ao menos um envolvido")
 
-        # --------------------------
-        # 🧠 INFERÊNCIA DO TIPO
-        # --------------------------
-
         tipo_principal, tipo_secundario = SinistroService._inferir_tipos(
             data.envolvidos
         )
-
-        # --------------------------
-        # 🧱 SINISTRO
-        # --------------------------
 
         sinistro = Sinistro(
             tipo_principal=tipo_principal,
@@ -65,7 +53,7 @@ class SinistroService:
         db.refresh(sinistro)
 
         # --------------------------
-        # 👥 ENVOLVIDOS
+        # ENVOLVIDOS
         # --------------------------
 
         for e in data.envolvidos:
@@ -119,7 +107,7 @@ class SinistroService:
                 )
 
         # --------------------------
-        # 📸 FOTOS
+        # FOTOS
         # --------------------------
 
         for file in files:
@@ -157,11 +145,12 @@ class SinistroService:
         return serialize_sinistro(sinistro)
 
     # ======================================================
-    # 🧠 INFERÊNCIA
+    # INFERÊNCIA
     # ======================================================
 
     @staticmethod
     def _inferir_tipos(envolvidos):
+
         tipos = [e.tipo for e in envolvidos]
 
         a = tipos[0]

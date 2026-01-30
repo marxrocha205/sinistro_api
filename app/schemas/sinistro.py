@@ -1,11 +1,8 @@
-from app.schemas.envolvido import EnvolvidoCreate
 from pydantic import BaseModel
 from datetime import datetime
-
-from app.models.enums import TipoPrincipalSinistro, TipoSecundarioSinistro
+from app.schemas.envolvido import EnvolvidoCreate
 from app.schemas.sinistro_foto import SinistroFotoResponse
-from app.schemas.veiculo import VeiculoCreate, VeiculoResponse
-from app.schemas.pedestre import PedestreCreate, PedestreResponse
+from app.models.enums import TipoPrincipalSinistro, TipoSecundarioSinistro
 
 
 # ==========================
@@ -13,9 +10,6 @@ from app.schemas.pedestre import PedestreCreate, PedestreResponse
 # ==========================
 
 class SinistroCreate(BaseModel):
-
-    tipo_principal: TipoPrincipalSinistro
-    tipo_secundario: TipoSecundarioSinistro
 
     descricao_outro: str | None = None
 
@@ -27,7 +21,7 @@ class SinistroCreate(BaseModel):
 
     houve_vitima_fatal: bool = False
 
-    envolvidos: list[EnvolvidoCreate] = []
+    envolvidos: list[EnvolvidoCreate]
 
 
 # ==========================
@@ -60,10 +54,15 @@ class SinistroResponse(BaseModel):
         from_attributes = True
 
 
+# ==========================
+# UPDATE
+# ==========================
+
 class SinistroUpdate(BaseModel):
 
     tipo_principal: TipoPrincipalSinistro
     tipo_secundario: TipoSecundarioSinistro
+
     descricao_outro: str | None
 
     endereco: str
