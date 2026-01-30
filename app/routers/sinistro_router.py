@@ -19,6 +19,7 @@ router = APIRouter(prefix="/sinistros", tags=["Sinistros"])
 
 
 # ✅ CREATE SINISTRO + FOTOS (JUNTOS)
+@router.post("/", response_model=dict)
 def criar_sinistro(
     descricao_outro: str | None = Form(None),
     endereco: str = Form(...),
