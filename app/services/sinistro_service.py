@@ -4,7 +4,10 @@ import uuid
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.enums import TipoEnvolvido
+from app.models.enums import (
+    TipoPrincipalSinistro,
+    TipoSecundarioSinistro,
+)
 from app.models.sinistro import Sinistro
 from app.models.veiculo import Veiculo
 from app.models.condutor import Condutor
@@ -28,29 +31,26 @@ class SinistroService:
         current_user,
         files=None,
     ):
-        # evita NoneType
         files = files or []
-
-        # --------------------------
-        # 🌍 GEO
-        # --------------------------
-
-        if not (-90 <= data.latitude <= 90):
-            raise HTTPException(400, "Latitude inválida")
-
-        if not (-180 <= data.longitude <= 180):
-            raise HTTPException(400, "Longitude inválida")
 
         if not data.envolvidos:
             raise HTTPException(400, "Informe ao menos um envolvido")
+
+        # --------------------------
+        # 🧠 INFERÊNCIA DO TIPO
+        # --------------------------
+
+        tipo_principal, tipo_secundario = SinistroService._inferir_tipos(
+            data.envolvidos
+        )
 
         # --------------------------
         # 🧱 SINISTRO
         # --------------------------
 
         sinistro = Sinistro(
-            tipo_principal=data.tipo_principal,
-            tipo_secundario=data.tipo_secundario,
+            tipo_principal=tipo_principal,
+            tipo_secundario=tipo_secundario,
             descricao_outro=data.descricao_outro,
             endereco=data.endereco,
             ponto_referencia=data.ponto_referencia,
@@ -70,10 +70,7 @@ class SinistroService:
 
         for e in data.envolvidos:
 
-            # =================
-            # 🚗 VEÍCULO
-            # =================
-            if e.tipo in (TipoEnvolvido.carro, TipoEnvolvido.moto):
+            if e.tipo in ("carro", "moto"):
 
                 if not e.veiculo:
                     raise HTTPException(400, "Veículo obrigatório")
@@ -89,15 +86,12 @@ class SinistroService:
                 )
 
                 db.add(veiculo)
-                db.flush()  # garante veiculo.id
+                db.flush()
 
                 if not v.condutor:
                     raise HTTPException(400, "Condutor obrigatório")
 
                 c = v.condutor
-
-                if c.possui_cnh and not c.numero_cnh:
-                    raise HTTPException(400, "CNH obrigatória")
 
                 db.add(
                     Condutor(
@@ -109,10 +103,7 @@ class SinistroService:
                     )
                 )
 
-            # =================
-            # 🚶 PEDESTRE
-            # =================
-            elif e.tipo == TipoEnvolvido.pedestre:
+            elif e.tipo == "pedestre":
 
                 if not e.pedestre:
                     raise HTTPException(400, "Pedestre obrigatório")
@@ -152,10 +143,6 @@ class SinistroService:
 
         db.commit()
 
-        # --------------------------
-        # 🔄 RETORNO
-        # --------------------------
-
         sinistro = (
             db.query(Sinistro)
             .filter(Sinistro.id == sinistro.id)
@@ -170,56 +157,37 @@ class SinistroService:
         return serialize_sinistro(sinistro)
 
     # ======================================================
-    # GET
+    # 🧠 INFERÊNCIA
     # ======================================================
 
     @staticmethod
-    def get_sinistro(db: Session, sinistro_id: int):
-        sinistro = (
-            db.query(Sinistro)
-            .filter(Sinistro.id == sinistro_id)
-            .options(
-                joinedload(Sinistro.veiculos).joinedload(Veiculo.condutor),
-                joinedload(Sinistro.pedestres),
-                joinedload(Sinistro.fotos),
+    def _inferir_tipos(envolvidos):
+        tipos = [e.tipo for e in envolvidos]
+
+        a = tipos[0]
+        b = tipos[1] if len(tipos) > 1 else "outro"
+
+        if a == "carro":
+            return (
+                TipoPrincipalSinistro.CARRO,
+                {
+                    "carro": TipoSecundarioSinistro.CARRO_CARRO,
+                    "moto": TipoSecundarioSinistro.CARRO_MOTO,
+                    "pedestre": TipoSecundarioSinistro.CARRO_PEDESTRE,
+                }.get(b, TipoSecundarioSinistro.CARRO_OUTRO),
             )
-            .first()
+
+        if a == "moto":
+            return (
+                TipoPrincipalSinistro.MOTO,
+                {
+                    "carro": TipoSecundarioSinistro.MOTO_CARRO,
+                    "moto": TipoSecundarioSinistro.MOTO_MOTO,
+                    "pedestre": TipoSecundarioSinistro.MOTO_PEDESTRE,
+                }.get(b, TipoSecundarioSinistro.MOTO_OUTRO),
+            )
+
+        return (
+            TipoPrincipalSinistro.OUTRO,
+            TipoSecundarioSinistro.OUTRO_OUTRO,
         )
-
-        if not sinistro:
-            raise HTTPException(404, "Sinistro não encontrado")
-
-        return serialize_sinistro(sinistro)
-
-    # ======================================================
-    # DELETE
-    # ======================================================
-
-    @staticmethod
-    def delete_sinistro(db: Session, sinistro_id: int, current_user):
-        sinistro = (
-            db.query(Sinistro)
-            .filter(Sinistro.id == sinistro_id)
-            .first()
-        )
-
-        if not sinistro:
-            raise HTTPException(404, "Sinistro não encontrado")
-
-        if (
-            current_user.perfil != "ADMIN"
-            and sinistro.usuario_id != current_user.id
-        ):
-            raise HTTPException(403, "Sem permissão")
-
-        for foto in sinistro.fotos:
-            try:
-                s3.delete_object(
-                    Bucket=BUCKET,
-                    Key=foto.caminho_arquivo,
-                )
-            except Exception as e:
-                print("⚠️ erro R2:", e)
-
-        db.delete(sinistro)
-        db.commit()

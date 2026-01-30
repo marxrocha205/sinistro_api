@@ -19,10 +19,7 @@ router = APIRouter(prefix="/sinistros", tags=["Sinistros"])
 
 
 # ✅ CREATE SINISTRO + FOTOS (JUNTOS)
-@router.post("", response_model=dict)
 def criar_sinistro(
-    tipo_principal: TipoPrincipalSinistro = Form(...),
-    tipo_secundario: TipoSecundarioSinistro = Form(...),
     descricao_outro: str | None = Form(None),
     endereco: str = Form(...),
     ponto_referencia: str | None = Form(None),
@@ -30,34 +27,19 @@ def criar_sinistro(
     longitude: float = Form(...),
     houve_vitima_fatal: bool = Form(False),
 
-    payload: str = Form(...),  # JSON com veiculos/pedestres
+    payload: str = Form(...),  # JSON com envolvidos
 
     files: list[UploadFile] | None = File(None),
 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    print("====== SINISTRO DEBUG API ======")
-    print("tipo_principal:", tipo_principal)
-    print("tipo_secundario:", tipo_secundario)
-    print("descricao_outro:", descricao_outro)
-    print("endereco:", endereco)
-    print("ponto_referencia:", ponto_referencia)
-    print("latitude:", latitude)
-    print("longitude:", longitude)
-    print("houve_vitima_fatal:", houve_vitima_fatal)
-    print("payload bruto:", payload)
-    print("files:", files)
-    print("===============================")
-    
     try:
         payload_data = json.loads(payload)
     except Exception:
         raise HTTPException(400, "Payload inválido")
 
     data = SinistroCreate(
-        tipo_principal=tipo_principal,
-        tipo_secundario=tipo_secundario,
         descricao_outro=descricao_outro,
         endereco=endereco,
         ponto_referencia=ponto_referencia,
@@ -73,7 +55,6 @@ def criar_sinistro(
         current_user=current_user,
         files=files,
     )
-
 
 # 📄 LISTAGEM
 @router.get("")
