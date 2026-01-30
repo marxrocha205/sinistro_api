@@ -97,18 +97,6 @@ def listar_sinistros(
         "total": total,
         "items": items,
     }
-
-
-# 🔍 DETALHE (JÁ VEM COM FOTOS)
-@router.get("/{sinistro_id}", response_model=SinistroResponse)
-def detalhar_sinistro(
-    sinistro_id: int,
-    db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
-):
-    return SinistroService.get_sinistro(db, sinistro_id)
-
-
 @router.get("/mapa")
 def sinistros_mapa(
     db: Session = Depends(get_db),
@@ -134,6 +122,18 @@ def sinistros_mapa(
         }
         for s in sinistros
     ]
+
+
+# 🔍 DETALHE (JÁ VEM COM FOTOS)
+@router.get("/{sinistro_id}", response_model=SinistroResponse)
+def detalhar_sinistro(
+    sinistro_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    return SinistroService.get_sinistro(db, sinistro_id)
+
+
 
 @router.put("/{sinistro_id}", response_model=SinistroResponse)
 def atualizar_sinistro(
