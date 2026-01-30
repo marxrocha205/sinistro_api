@@ -4,7 +4,7 @@ import uuid
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.enums import TipoSecundarioSinistro
+from app.models.enums import TipoEnvolvido
 from app.models.sinistro import Sinistro
 from app.models.veiculo import Veiculo
 from app.models.condutor import Condutor
@@ -28,6 +28,8 @@ class SinistroService:
         current_user,
         files=None,
     ):
+        # evita NoneType
+        files = files or []
 
         # --------------------------
         # 🌍 GEO
@@ -50,10 +52,10 @@ class SinistroService:
             tipo_principal=data.tipo_principal,
             tipo_secundario=data.tipo_secundario,
             descricao_outro=data.descricao_outro,
-            latitude=data.latitude,
-            longitude=data.longitude,
             endereco=data.endereco,
             ponto_referencia=data.ponto_referencia,
+            latitude=data.latitude,
+            longitude=data.longitude,
             houve_vitima_fatal=data.houve_vitima_fatal,
             usuario_id=current_user.id,
         )
@@ -68,11 +70,10 @@ class SinistroService:
 
         for e in data.envolvidos:
 
-            # ============
+            # =================
             # 🚗 VEÍCULO
-            # ============
-
-            if e.tipo in ("carro", "moto"):
+            # =================
+            if e.tipo in (TipoEnvolvido.carro, TipoEnvolvido.moto):
 
                 if not e.veiculo:
                     raise HTTPException(400, "Veículo obrigatório")
@@ -88,7 +89,7 @@ class SinistroService:
                 )
 
                 db.add(veiculo)
-                db.flush()
+                db.flush()  # garante veiculo.id
 
                 if not v.condutor:
                     raise HTTPException(400, "Condutor obrigatório")
@@ -108,11 +109,10 @@ class SinistroService:
                     )
                 )
 
-            # ============
+            # =================
             # 🚶 PEDESTRE
-            # ============
-
-            if e.tipo == "pedestre":
+            # =================
+            elif e.tipo == TipoEnvolvido.pedestre:
 
                 if not e.pedestre:
                     raise HTTPException(400, "Pedestre obrigatório")
@@ -131,29 +131,30 @@ class SinistroService:
         # 📸 FOTOS
         # --------------------------
 
-        if files:
-            for file in files:
+        for file in files:
+            ext = os.path.splitext(file.filename)[1]
+            nome = f"{uuid.uuid4()}{ext}"
+            key = f"sinistros/{sinistro.id}/{nome}"
 
-                ext = os.path.splitext(file.filename)[1]
-                nome = f"{uuid.uuid4()}{ext}"
+            s3.upload_fileobj(
+                file.file,
+                BUCKET,
+                key,
+                ExtraArgs={"ContentType": file.content_type},
+            )
 
-                key = f"sinistros/{sinistro.id}/{nome}"
-
-                s3.upload_fileobj(
-                    file.file,
-                    BUCKET,
-                    key,
-                    ExtraArgs={"ContentType": file.content_type},
+            db.add(
+                SinistroFoto(
+                    caminho_arquivo=key,
+                    sinistro_id=sinistro.id,
                 )
-
-                db.add(
-                    SinistroFoto(
-                        caminho_arquivo=key,
-                        sinistro_id=sinistro.id,
-                    )
-                )
+            )
 
         db.commit()
+
+        # --------------------------
+        # 🔄 RETORNO
+        # --------------------------
 
         sinistro = (
             db.query(Sinistro)
@@ -174,7 +175,6 @@ class SinistroService:
 
     @staticmethod
     def get_sinistro(db: Session, sinistro_id: int):
-
         sinistro = (
             db.query(Sinistro)
             .filter(Sinistro.id == sinistro_id)
@@ -197,7 +197,6 @@ class SinistroService:
 
     @staticmethod
     def delete_sinistro(db: Session, sinistro_id: int, current_user):
-
         sinistro = (
             db.query(Sinistro)
             .filter(Sinistro.id == sinistro_id)
