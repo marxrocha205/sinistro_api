@@ -80,6 +80,9 @@ class SinistroService:
                     raise HTTPException(400, "Condutor obrigatório")
 
                 c = v.condutor
+                
+                if c.possui_cnh and not c.numero_cnh:
+                    raise HTTPException(400, "CNH obrigatória")
 
                 db.add(
                     Condutor(
