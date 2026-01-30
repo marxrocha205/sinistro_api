@@ -125,7 +125,7 @@ def sinistros_mapa(
 
 
 # 🔍 DETALHE (JÁ VEM COM FOTOS)
-@router.get("/{sinistro_id}", response_model=SinistroResponse)
+@router.get("/{sinistro_id}")
 def detalhar_sinistro(
     sinistro_id: int,
     db: Session = Depends(get_db),
