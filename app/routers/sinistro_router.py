@@ -58,7 +58,7 @@ def criar_sinistro(
     )
 
 # 📄 LISTAGEM
-@router.get("")
+@router.get("/")
 def listar_sinistros(
     skip: int = 0,
     limit: int = 20,
