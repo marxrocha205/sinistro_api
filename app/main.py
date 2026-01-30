@@ -14,6 +14,7 @@ from app.routers import (
 app = FastAPI(
     title="API de Sinistros de Trânsito",
     version="1.0.0",
+    redirect_slashes=False,
 )
 
 app.add_middleware(
